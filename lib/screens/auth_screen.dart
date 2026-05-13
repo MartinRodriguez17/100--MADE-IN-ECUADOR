@@ -391,7 +391,7 @@ class _AuthScreenState extends State<AuthScreen> {
       keyboardType: keyboardType,
       validator: validator,
       inputFormatters: inputFormatters,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: Color.fromARGB(255, 1, 1, 1)),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: Color.fromARGB(255, 60, 55, 55), fontSize: 14),
