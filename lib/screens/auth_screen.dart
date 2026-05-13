@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'admin_auth_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -9,23 +10,29 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  // Esta variable controla si mostramos la vista de Login (true) o la de Registro (false)
   bool _mostrarLogin = true;
 
-  // Claves globales para validar los formularios
+  // Claves globales para controlar y validar los estados de ambos formularios
   final _loginFormKey = GlobalKey<FormState>();
   final _registerFormKey = GlobalKey<FormState>();
 
-  // Controladores de texto
+  // Controladores para capturar y manipular el texto que ingresa el usuario
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nombreController = TextEditingController();
   final _emprendimientoController = TextEditingController();
   final _telefonoController = TextEditingController();
   
+  // Variable booleana para el switch (para saber si el usuario es vendedor o comprador)
   bool _esEmprendedor = false;
+
+  int _contadorToquesAdmin = 0;
+  DateTime? _ultimoToqueAdmin;
 
   @override
   void dispose() {
+    // Es buena práctica liberar los controladores de la memoria cuando ya no se usa la pantalla
     _emailController.dispose();
     _passwordController.dispose();
     _nombreController.dispose();
@@ -36,7 +43,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // --- VALIDACIONES CON EXPRESIONES REGULARES (RegExp) ---
 
-  // Validar Correo Electrónico con @ y dominio
+  // Función para validar que el correo no esté vacío y que tenga un formato real con @ y dominio
   String? _validarEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'Por favor, ingresa tu correo';
@@ -48,7 +55,7 @@ class _AuthScreenState extends State<AuthScreen> {
     return null;
   }
 
-  // Validar Nombre Completo (Solo letras y espacios)
+  // Función para validar que el nombre no esté vacío y que use únicamente letras y espacios
   String? _validarNombre(String? value) {
     if (value == null || value.isEmpty) {
       return 'Este campo es obligatorio';
@@ -60,7 +67,7 @@ class _AuthScreenState extends State<AuthScreen> {
     return null;
   }
 
-  // Validar Contraseña (Min 8, Max 12, Mayúscula, Minúscula y Número)
+  // Función para validar los requisitos de la contraseña (longitud de 8 a 12 y caracteres combinados)
   String? _validarPassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Por favor, ingresa una contraseña';
@@ -68,7 +75,7 @@ class _AuthScreenState extends State<AuthScreen> {
     if (value.length < 8 || value.length > 12) {
       return 'Debe tener entre 8 y 12 caracteres';
     }
-    // Validar al menos una mayúscula, una minúscula y un número
+    // Verifica que tenga al menos una mayúscula, una minúscula y un número obligatoriamente
     final passwordRegex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$');
     if (!passwordRegex.hasMatch(value)) {
       return 'Debe incluir mayúsculas, minúsculas y números';
@@ -76,7 +83,7 @@ class _AuthScreenState extends State<AuthScreen> {
     return null;
   }
 
-  // Validar Teléfono (Solo números)
+  // Función para validar que el teléfono tenga una longitud mínima aceptable
   String? _validarTelefono(String? value) {
     if (value == null || value.isEmpty) {
       return 'Ingresa un número de teléfono';
@@ -95,6 +102,7 @@ class _AuthScreenState extends State<AuthScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: AnimatedSwitcher(
+              // Agregamos una animación suave de 400ms al cambiar entre Login y Registro
               duration: const Duration(milliseconds: 400),
               child: _mostrarLogin ? _buildLoginForm() : _buildRegisterForm(),
             ),
@@ -109,7 +117,7 @@ class _AuthScreenState extends State<AuthScreen> {
     return Form(
       key: _loginFormKey,
       child: Column(
-        key: const ValueKey('LoginForm'),
+        key: const ValueKey('LoginForm'), // Key única para que AnimatedSwitcher reconozca el cambio
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
@@ -117,7 +125,7 @@ class _AuthScreenState extends State<AuthScreen> {
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Color.fromARGB(255, 28, 24, 255),
             ),
             textAlign: TextAlign.center,
           ),
@@ -139,12 +147,13 @@ class _AuthScreenState extends State<AuthScreen> {
               if (value == null || value.isEmpty) {
                 return 'Por favor, ingresa tu contraseña';
               }
-              return null; // La validación de fuerza de contraseña se hace al registrarse
+              return null; // En el login solo vemos que no esté vacío, la validación fuerte está en el registro
             },
           ),
           const SizedBox(height: 32),
           ElevatedButton(
             onPressed: () {
+              // Si todo el formulario pasa las validaciones, ejecutamos la lógica del botón
               if (_loginFormKey.currentState!.validate()) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Validando credenciales...')),
@@ -152,7 +161,7 @@ class _AuthScreenState extends State<AuthScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.cyanAccent,
+              backgroundColor: const Color.fromARGB(255, 255, 255, 255),
               foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -170,15 +179,14 @@ class _AuthScreenState extends State<AuthScreen> {
             child: TextButton(
               onPressed: () {
                 setState(() {
-                  _mostrarLogin = false;
-                  // Limpiar formularios al cambiar de pantalla
-                  _loginFormKey.currentState?.reset();
+                  _mostrarLogin = false; // Cambiamos el estado para ocultar el login y mostrar registro
+                  _loginFormKey.currentState?.reset(); // Limpiamos errores previos del formulario
                 });
               },
               child: const Text(
                 "Registrar",
                 style: TextStyle(
-                  color: Colors.cyanAccent,
+                  color: Color.fromARGB(255, 28, 24, 255),
                   fontSize: 15,
                   decoration: TextDecoration.underline,
                 ),
@@ -195,27 +203,55 @@ class _AuthScreenState extends State<AuthScreen> {
     return Form(
       key: _registerFormKey,
       child: Column(
-        key: const ValueKey('RegisterForm'),
+        key: const ValueKey('RegisterForm'), // Key única para el cambio de animación
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            "Crea tu Cuenta",
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          // REEMPLAZAMOS EL TEXT POR EL GESTUREDETECTOR DETECTOR DE 5 TOQUES:
+          GestureDetector(
+            onTap: () {
+              final ahora = DateTime.now();
+
+              // Si el toque actual es rápido (menos de 500ms de diferencia), suma al contador
+              if (_ultimoToqueAdmin == null || ahora.difference(_ultimoToqueAdmin!) < const Duration(milliseconds: 500)) {
+                _contadorToquesAdmin++;
+              } else {
+                // Si tardó mucho entre toques, el contador se reinicia a 1
+                _contadorToquesAdmin = 1;
+              }
+
+              _ultimoToqueAdmin = ahora; // Guardamos la hora de este toque
+
+              // ¡Al llegar a los 5 toques seguidos saltamos a la nueva pantalla!
+              if (_contadorToquesAdmin == 5) {
+                _contadorToquesAdmin = 0; // Reseteamos el contador al instante
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdminAuthScreen(),
+                  ),
+                );
+              }
+            },
+            child: Text(  //no se usa const por el color dinamico
+              "Crea tu Cuenta",
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Color.fromARGB(255, 28, 24, 255), // Tu color azul intacto
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          // Nombre Completo (Filtra números desde el teclado)
           _buildTextField(
             controller: _nombreController,
             label: "Nombre Completo",
             icon: Icons.person_outline,
             validator: _validarNombre,
             inputFormatters: [
-              FilteringTextInputFormatter.deny(RegExp(r'[0-9]')), // No permite escribir números
+              // Formatter físico para impedir que el usuario pueda tipear números directamente
+              FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
             ],
           ),
           const SizedBox(height: 16),
@@ -235,27 +271,27 @@ class _AuthScreenState extends State<AuthScreen> {
             validator: _validarPassword,
           ),
           const SizedBox(height: 16),
-          // Switch de Emprendedor
+          // Switch para alternar el rol de usuario normal a emprendedor vendedor
           SwitchListTile(
             title: const Text(
               "¿Eres Emprendedor?",
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Color.fromARGB(255, 28, 24, 255)),
             ),
             subtitle: const Text(
               "Activa esto si vas a vender ropa",
-              style: TextStyle(color: Colors.grey, fontSize: 13),
+              style: TextStyle(color: Color.fromARGB(255, 0, 0, 0), fontSize: 13),
             ),
             value: _esEmprendedor,
-            activeColor: Colors.cyanAccent,
+            activeColor: const Color.fromARGB(255, 17, 201, 20),
             onChanged: (bool value) {
               setState(() {
-                _esEmprendedor = value;
+                _esEmprendedor = value; // Actualiza el estado para redibujar la pantalla
               });
             },
           ),
           
           // --- CAMPOS DINÁMICOS PARA EMPRENDEDORES ---
-          // Aparecen con una transición suave si _esEmprendedor es true
+          // Este widget maneja la animación de tamaño para desplegar los campos extra de forma fluida
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -267,9 +303,10 @@ class _AuthScreenState extends State<AuthScreen> {
                         controller: _emprendimientoController,
                         label: "Nombre del Emprendimiento",
                         icon: Icons.store_outlined,
+                        // Si está activo el switch, valida el nombre del local; si no, retorna null
                         validator: (value) => _esEmprendedor ? _validarNombre(value) : null,
                         inputFormatters: [
-                          FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+                          FilteringTextInputFormatter.deny(RegExp(r'[0-9]')), // Bloquea números en el local
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -277,29 +314,30 @@ class _AuthScreenState extends State<AuthScreen> {
                         controller: _telefonoController,
                         label: "Número de Teléfono",
                         icon: Icons.phone_outlined,
-                        keyboardType: TextInputType.phone,
+                        keyboardType: TextInputType.phone, // Despliega el teclado numérico en el celular
                         validator: (value) => _esEmprendedor ? _validarTelefono(value) : null,
                         inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly, // Solo permite números en el teclado
-                          LengthLimitingTextInputFormatter(10),   // Máximo 10 dígitos (Formato celular Ecuador)
+                          FilteringTextInputFormatter.digitsOnly, // Fuerza a que solo admita números enteros
+                          LengthLimitingTextInputFormatter(10),   // Restringe la entrada a máximo 10 dígitos (Ecuador)
                         ],
                       ),
                     ],
                   )
-                : const SizedBox.shrink(),
+                : const SizedBox.shrink(), // Si no es emprendedor, renderiza un espacio vacío sin ocupar tamaño
           ),
           
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
+              // Ejecuta la validación de todos los campos del registro antes de avanzar
               if (_registerFormKey.currentState!.validate()) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Procesando registro en Supabase...')),
+                  const SnackBar(content: Text('Procesando registro ')),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.cyanAccent,
+              backgroundColor: const Color.fromARGB(255, 255, 255, 255),
               foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -317,14 +355,14 @@ class _AuthScreenState extends State<AuthScreen> {
             child: TextButton(
               onPressed: () {
                 setState(() {
-                  _mostrarLogin = true;
-                  _registerFormKey.currentState?.reset();
+                  _mostrarLogin = true; // Volvemos a cambiar el estado para ir a la vista de Login
+                  _registerFormKey.currentState?.reset(); // Reseteamos errores en la UI del registro
                 });
               },
               child: const Text(
-                "Ya tengo cuenta (Login)",
+                "Ya tengo cuenta",
                 style: TextStyle(
-                  color: Colors.cyanAccent,
+                  color: Color.fromARGB(255, 28, 24, 255),
                   fontSize: 15,
                   decoration: TextDecoration.underline,
                 ),
@@ -337,6 +375,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   // --- TEXTFIELD PERSONALIZADO Y REUTILIZABLE ---
+  // Constructor modular para no repetir el mismo diseño visual de InputDecoration en cada input
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -355,10 +394,10 @@ class _AuthScreenState extends State<AuthScreen> {
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+        labelStyle: const TextStyle(color: Color.fromARGB(255, 60, 55, 55), fontSize: 14),
         prefixIcon: Icon(icon, color: Colors.grey),
         filled: true,
-        fillColor: const Color(0xFF1E1E30),
+        fillColor: const Color.fromARGB(255, 251, 251, 255), // Color de fondo oscuro personalizado
         errorStyle: const TextStyle(color: Colors.redAccent),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -374,7 +413,7 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.cyanAccent, width: 1.5),
+          borderSide: const BorderSide(color: Color.fromARGB(255, 28, 24, 255), width: 1.5),
         ),
       ),
     );
